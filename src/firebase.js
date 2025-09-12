@@ -1,9 +1,8 @@
-// src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage"; // 1. Import getStorage
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyC2ETklkpW0ci9Mtrg_xAufEFBt-Sc6VXw",
     authDomain: "career-bridge-456d6.firebaseapp.com",
@@ -14,9 +13,10 @@ const firebaseConfig = {
     measurementId: "G-2N4E0GW06X"
 }
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app); // 2. Initialize Storage
 
-// Export services for use in other parts of your app
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+export { auth, db, storage }; // 3. Export storage
+
