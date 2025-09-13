@@ -7,6 +7,7 @@ import AuthLayout from './components/AuthLayout.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import PublicRoute from './components/PublicRoute.jsx';
 
+
 // --- Page Components ---
 import HomePage from './pages/HomePage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -27,6 +28,8 @@ import MyCoursesPage from './pages/MyCoursesPage.jsx';
 import MyApplicationsPage from './pages/MyApplicationsPage.jsx';
 import InterviewCoachPage from './pages/InterviewCoachPage.jsx';
 import CandidateSearchPage from './pages/CandidateSearchPage.jsx';
+import ResumeScanner from './pages/ResumeScanner';
+import InterviewCoach from './pages/InterviewCoach';
 
 export default function App() {
     return (
@@ -57,7 +60,7 @@ export default function App() {
                     <Route path="/jobs/:jobId/applicants" element={<ProtectedRoute><ApplicantsPage /></ProtectedRoute>} />
                     <Route path="/my-applications" element={<ProtectedRoute><MyApplicationsPage /></ProtectedRoute>} />
                     <Route path="/candidate-search" element={<ProtectedRoute><CandidateSearchPage /></ProtectedRoute>} />
-
+                    <Route path="/resume-scanner" element={<ProtectedRoute><ResumeScanner /></ProtectedRoute>} />
                     {/* Course Routes */}
                     <Route path="/courses" element={<ProtectedRoute><CoursesPage /></ProtectedRoute>} />
                     <Route path="/courses/:courseId" element={<ProtectedRoute><CourseDetailPage /></ProtectedRoute>} />
@@ -65,7 +68,7 @@ export default function App() {
 
                     {/* AI Feature */}
                     <Route path="/interview-coach" element={<ProtectedRoute><InterviewCoachPage /></ProtectedRoute>} />
-
+                    <Route path="/interview-coach" element={<ProtectedRoute><InterviewCoach /></ProtectedRoute>} />
                     {/* Catch-all 404 Route */}
                     <Route path="*" element={<NotFoundPage />} />
                 </Route>

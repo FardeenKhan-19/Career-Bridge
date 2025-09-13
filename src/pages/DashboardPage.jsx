@@ -5,7 +5,7 @@ import { db } from '../firebase.js';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import {
     InfoIcon, BriefcaseIcon, BookOpenIcon, UserCircleIcon, ChatBubbleIcon,
-    ClipboardListIcon, ClockIcon, TrendingUpIcon, UsersIcon
+    ClipboardListIcon, ClockIcon, TrendingUpIcon, UsersIcon , DocumentSearchIcon 
 } from '../components/Icons.jsx';
 
 // --- Reusable Components ---
@@ -95,6 +95,13 @@ const StudentDashboard = () => {
                     <Link to="/courses" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors"><BookOpenIcon /><div><h3 className="font-bold text-lg text-gray-800">Browse Courses</h3><p className="text-gray-600">Upskill your talent.</p></div></Link>
                     <Link to="/my-courses" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors"><BookOpenIcon /><div><h3 className="font-bold text-lg text-gray-800">My Courses</h3><p className="text-gray-600">View enrolled courses.</p></div></Link>
                     <Link to="/interview-coach" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors"><ChatBubbleIcon /><div><h3 className="font-bold text-lg text-gray-800">AI Interview Coach</h3><p className="text-gray-600">Practice your skills.</p></div></Link>
+                    <Link to="/resume-scanner" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors">
+        <DocumentSearchIcon />
+        <div>
+            <h3 className="font-bold text-lg text-gray-800">AI Resume Scanner</h3>
+            <p className="text-gray-600">Get instant analysis.</p>
+        </div>
+    </Link>
                 </div>
             </div>
             <div className="space-y-8">
