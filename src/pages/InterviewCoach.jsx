@@ -1,26 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { marked } from 'marked';
+import { useAuth } from '../contexts/AuthContext.jsx'; // Import useAuth to get the user ID
 import { 
     VideoCameraIcon, ChevronDownIcon, StopIcon, ArrowPathIcon, XCircleIcon, 
-    MicrophoneIcon, PlayIcon, PaperAirplaneIcon, ChatBubbleLeftRightIcon 
-} from '../components/Icons.jsx'; // Add new icons
+    MicrophoneIcon, PlayIcon, PaperAirplaneIcon, ChatBubbleLeftRightIcon, CheckCircleIcon 
+} from '../components/Icons.jsx';
 
-// --- Helper Component for Mode Selection ---
+// --- Sub-component for displaying the mode selection ---
 const ModeSelector = ({ selectedMode, setMode }) => {
     const modes = [
         { key: 'video', icon: <VideoCameraIcon className="w-8 h-8" />, label: 'Video & Audio', description: 'Practice on camera.' },
         { key: 'audio', icon: <MicrophoneIcon className="w-8 h-8" />, label: 'Audio Only', description: 'Practice speaking.' },
         { key: 'text', icon: <ChatBubbleLeftRightIcon className="w-8 h-8" />, label: 'Text Only', description: 'Type your answer.' }
     ];
-
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {modes.map(mode => (
-                <button
-                    key={mode.key}
-                    type="button"
-                    onClick={() => setMode(mode.key)}
-                    className={`p-6 text-center border-2 rounded-lg transition-all duration-200 ${selectedMode === mode.key ? 'border-teal-500 bg-teal-50 shadow-lg' : 'border-gray-300 bg-white hover:border-teal-400'}`}
-                >
+                <button key={mode.key} type="button" onClick={() => setMode(mode.key)} className={`p-6 text-center border-2 rounded-lg transition-all duration-200 ${selectedMode === mode.key ? 'border-teal-500 bg-teal-50 shadow-lg' : 'border-gray-300 bg-white hover:border-teal-400'}`}>
                     <div className="flex justify-center text-gray-600 mb-3">{mode.icon}</div>
                     <p className="font-bold text-gray-800">{mode.label}</p>
                     <p className="text-sm text-gray-500">{mode.description}</p>
@@ -30,70 +26,70 @@ const ModeSelector = ({ selectedMode, setMode }) => {
     );
 };
 
+// --- Sub-component for rendering AI feedback ---
+const AnalysisDisplay = ({ content }) => {
+    const htmlContent = marked(content);
+    return <div className="prose prose-sm max-w-none text-left mt-4 p-4 bg-gray-100 rounded-md" dangerouslySetInnerHTML={{ __html: htmlContent }} />;
+};
+
 
 const InterviewCoach = () => {
-    // --- Setup State ---
+    // --- STATE MANAGEMENT ---
+    const { user } = useAuth(); // Get user from AuthContext for saving sessions
     const [interviewType, setInterviewType] = useState('behavioral');
     const [jobRole, setJobRole] = useState('software-engineer');
-    const [practiceMode, setPracticeMode] = useState('video'); // 'video', 'audio', or 'text'
-    
-    // --- Session State ---
+    const [practiceMode, setPracticeMode] = useState('video');
     const [sessionStarted, setSessionStarted] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [currentQuestion, setCurrentQuestion] = useState('');
     const [error, setError] = useState('');
-
-    // --- Recording & Text State ---
     const [isRecording, setIsRecording] = useState(false);
     const [mediaUrl, setMediaUrl] = useState(null);
     const [textAnswer, setTextAnswer] = useState('');
+    const [submissionStatus, setSubmissionStatus] = useState(null);
+    const [aiFeedback, setAiFeedback] = useState('');
 
-    // --- Refs ---
+    // --- REFS ---
     const videoRef = useRef(null);
     const streamRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const recordedChunksRef = useRef([]);
 
-    // --- Core Functions ---
+    // --- CORE LOGIC ---
     const fetchQuestion = async () => {
         setIsLoading(true);
         setError('');
         setCurrentQuestion('');
         setMediaUrl(null);
         setTextAnswer('');
+        setSubmissionStatus(null);
+        setAiFeedback('');
         try {
             const response = await fetch(`http://localhost:5000/api/interview/question?type=${interviewType}&role=${jobRole}`);
-            if (!response.ok) throw new Error('Failed to fetch question.');
+            if (!response.ok) throw new Error('Failed to fetch question from server.');
             const data = await response.json();
             setCurrentQuestion(data.question);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err) { setError(err.message); } 
+        finally { setIsLoading(false); }
     };
     
     const handleStartSession = async () => {
+        setSessionStarted(true);
         await fetchQuestion();
-        
-        // Only request media for audio/video modes
         if (practiceMode === 'video' || practiceMode === 'audio') {
             try {
-                const constraints = {
-                    video: practiceMode === 'video',
-                    audio: true
-                };
+                const constraints = { video: practiceMode === 'video', audio: true };
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                streamRef.current = stream;
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
+                    videoRef.current.play().catch(e => console.error("Video play failed:", e));
                 }
-                streamRef.current = stream;
             } catch (err) {
-                setError("Could not access media devices. Please check permissions.");
-                return; // Stop if permission is denied
+                setError("Could not access media devices. Please check browser permissions.");
+                setSessionStarted(false);
             }
         }
-        setSessionStarted(true);
     };
 
     const handleEndSession = () => {
@@ -103,7 +99,6 @@ const InterviewCoach = () => {
         setSessionStarted(false);
     };
 
-    // --- Recording & Submission Logic ---
     const handleStartRecording = () => {
         if (streamRef.current) {
             recordedChunksRef.current = [];
@@ -123,21 +118,110 @@ const InterviewCoach = () => {
         if (mediaRecorderRef.current) {
             mediaRecorderRef.current.stop();
             setIsRecording(false);
+            if (practiceMode === 'video' && streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+                if(videoRef.current) videoRef.current.srcObject = null;
+            }
         }
     };
 
-    const handleSubmitTextAnswer = () => {
-        console.log("Submitting text answer:", textAnswer);
-        // This is where you would send the textAnswer to an AI for feedback
-        alert("Your text answer has been submitted for feedback!");
-    };
+    // --- Final Submission Logic for Audio/Video ---
+    const handleSubmitRecording = async () => {
+        if (!user) {
+            setError("You must be logged in to save a session.");
+            setSubmissionStatus('error');
+            return;
+        }
+        setSubmissionStatus('submitting');
+        setAiFeedback('');
+        
+        const mimeType = practiceMode === 'video' ? 'video/webm' : 'audio/webm';
+        const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+        const formData = new FormData();
+        formData.append('audio', blob, 'recording.webm');
+        formData.append('question', currentQuestion);
 
-    // Cleanup effect
+        try {
+            const response = await fetch('http://localhost:5000/api/interview/analyze-audio', {
+                method: 'POST',
+                body: formData,
+            });
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Failed to get feedback from server.');
+            }
+            const data = await response.json();
+            setAiFeedback(data.feedback);
+            setSubmissionStatus('success');
+
+            // Save session to Firestore
+            await fetch('http://localhost:5000/api/interview/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.uid,
+                    question: currentQuestion,
+                    answer: `(Audio/Video Response) Transcription: ${data.transcription}`,
+                    feedback: data.feedback,
+                    type: interviewType,
+                    role: jobRole,
+                    mode: practiceMode
+                }),
+            });
+        } catch (err) {
+            setSubmissionStatus('error');
+            setError(err.message);
+        }
+    };
+    
+    // --- Final Submission Logic for Text ---
+    const handleSubmitTextAnswer = async () => {
+        if (!user) {
+            setError("You must be logged in to save a session.");
+            setSubmissionStatus('error');
+            return;
+        }
+        setSubmissionStatus('submitting');
+        setAiFeedback('');
+        try {
+            const response = await fetch('http://localhost:5000/api/interview/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: currentQuestion, answer: textAnswer }),
+            });
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Failed to get feedback from server.');
+            }
+            const data = await response.json();
+            setAiFeedback(data.feedback);
+            setSubmissionStatus('success');
+            
+            // Save session to Firestore
+            await fetch('http://localhost:5000/api/interview/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.uid,
+                    question: currentQuestion,
+                    answer: textAnswer,
+                    feedback: data.feedback,
+                    type: interviewType,
+                    role: jobRole,
+                    mode: practiceMode
+                }),
+            });
+        } catch (err) {
+            setSubmissionStatus('error');
+            setError(err.message);
+        }
+    };
+    
     useEffect(() => {
         return () => { if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop()); };
     }, []);
 
-    // --- Main Render Logic ---
+    // --- JSX RENDER ---
     return (
         <div className="bg-gray-50 min-h-screen w-full flex flex-col items-center p-4 sm:p-8">
             <div className="w-full max-w-4xl bg-white p-8 rounded-2xl shadow-lg">
@@ -145,10 +229,9 @@ const InterviewCoach = () => {
                     <h1 className="text-4xl font-bold text-gray-800">AI Interview Coach</h1>
                     <p className="text-gray-600 mt-2">{sessionStarted ? "Focus and deliver your best answer." : "Practice and get AI-powered feedback."}</p>
                 </div>
-
+                
                 {!sessionStarted ? (
-                    // --- SETUP VIEW ---
-                    <div className="space-y-8">
+                     <div className="space-y-8">
                         <div>
                              <label className="block text-lg font-bold text-gray-800 mb-4 text-center">1. Choose Your Practice Mode</label>
                              <ModeSelector selectedMode={practiceMode} setMode={setPracticeMode} />
@@ -158,11 +241,11 @@ const InterviewCoach = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label htmlFor="interviewType" className="block text-sm font-medium text-gray-700 mb-2">Interview Type</label>
-                                    <div className="relative"><select id="interviewType" value={interviewType} onChange={(e) => setInterviewType(e.target.value)} className="w-full appearance-none bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-3 pr-8 focus:ring-teal-500 focus:border-teal-500"><option value="behavioral">Behavioral</option><option value="technical">Technical</option><option value="situational">Situational</option></select><ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" /></div>
+                                    <div className="relative"><select id="interviewType" value={interviewType} onChange={(e) => setInterviewType(e.target.value)} className="w-full appearance-none bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-3 pr-8 focus:ring-teal-500 focus:border-teal-500"><option value="behavioral">Behavioral</option><option value="technical">Technical</option></select><ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" /></div>
                                 </div>
                                 <div>
                                     <label htmlFor="jobRole" className="block text-sm font-medium text-gray-700 mb-2">Target Job Role</label>
-                                    <div className="relative"><select id="jobRole" value={jobRole} onChange={(e) => setJobRole(e.target.value)} className="w-full appearance-none bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-3 pr-8 focus:ring-teal-500 focus:border-teal-500"><option value="software-engineer">Software Engineer</option><option value="product-manager">Product Manager</option><option value="data-analyst">Data Analyst</option><option value="marketing-specialist">Marketing Specialist</option></select><ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" /></div>
+                                    <div className="relative"><select id="jobRole" value={jobRole} onChange={(e) => setJobRole(e.target.value)} className="w-full appearance-none bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-3 pr-8 focus:ring-teal-500 focus:border-teal-500"><option value="software-engineer">Software Engineer</option><option value="product-manager">Product Manager</option><option value="data-analyst">Data Analyst</option></select><ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" /></div>
                                 </div>
                             </div>
                         </div>
@@ -172,43 +255,48 @@ const InterviewCoach = () => {
                         </div>
                     </div>
                 ) : (
-                    // --- PRACTICE VIEW ---
                     <div className="animate-fade-in">
-                        {/* --- Question Display --- */}
-                        <div className="mb-6 bg-gray-50 p-6 rounded-lg text-center border">
-                            <h3 className="text-lg font-semibold text-gray-600 mb-2">Question:</h3>
-                            {isLoading ? <p className="text-xl text-gray-500 animate-pulse">Loading...</p> : <p className="text-2xl font-bold text-gray-800">{currentQuestion}</p>}
-                        </div>
+                        {submissionStatus === 'success' || submissionStatus === 'error' ? (
+                            <div className="text-center">
+                                <div className={`${submissionStatus === 'success' ? 'bg-green-100 border-green-200' : 'bg-red-100 border-red-200'} border p-6 rounded-lg`}>
+                                    <div className="flex flex-col items-center gap-4">
+                                        {submissionStatus === 'success' ? <CheckCircleIcon className="w-16 h-16 text-green-600" /> : <XCircleIcon className="w-16 h-16 text-red-600" />}
+                                        <h2 className={`text-2xl font-semibold ${submissionStatus === 'success' ? 'text-green-800' : 'text-red-800'}`}>
+                                            {submissionStatus === 'success' ? 'Feedback Received!' : 'An Error Occurred'}
+                                        </h2>
+                                        <p className="text-gray-600">
+                                            {submissionStatus === 'success' ? 'Your session has been saved. Here is your AI-powered feedback:' : error}
+                                        </p>
+                                    </div>
+                                    {submissionStatus === 'success' && <AnalysisDisplay content={aiFeedback} />}
+                                </div>
+                                <button onClick={handleEndSession} className="mt-8 bg-gray-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-gray-700">Practice Again</button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="mb-6 bg-gray-50 p-6 rounded-lg text-center border">
+                                    <h3 className="text-lg font-semibold text-gray-600 mb-2">Question:</h3>
+                                    {isLoading ? <p className="text-xl text-gray-500 animate-pulse">Loading...</p> : <p className="text-2xl font-bold text-gray-800">{currentQuestion}</p>}
+                                </div>
 
-                        {/* --- DYNAMIC INPUT AREA --- */}
-                        {practiceMode === 'video' && (
-                            <div className="bg-black rounded-lg overflow-hidden shadow-lg border border-gray-300 relative"><video ref={videoRef} autoPlay={!mediaUrl} muted playsInline controls={!!mediaUrl} src={mediaUrl || ''} className="w-full h-auto"></video></div>
-                        )}
-                        {practiceMode === 'audio' && !mediaUrl && (
-                             <div className="bg-gray-100 rounded-lg p-8 text-center"><MicrophoneIcon className={`w-16 h-16 mx-auto ${isRecording ? 'text-red-500 animate-pulse' : 'text-gray-400'}`} /><p className="mt-4 text-gray-600">{isRecording ? "Recording your audio..." : "Prepare to record your answer."}</p></div>
-                        )}
-                         {practiceMode === 'audio' && mediaUrl && (
-                             <div className="p-8"><audio src={mediaUrl} controls className="w-full"></audio></div>
-                        )}
-                        {practiceMode === 'text' && (
-                            <div><textarea value={textAnswer} onChange={(e) => setTextAnswer(e.target.value)} placeholder="Type your answer here..." className="w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500"></textarea></div>
-                        )}
-                        
-                        {/* --- Review & Submit Panels --- */}
-                        {mediaUrl && (
-                             <div className="mt-6 bg-teal-50 p-4 rounded-lg text-center border border-teal-200"><h3 className="text-xl font-bold text-teal-800">Review Your Answer</h3><p className="text-gray-600 mt-1">Submit your recording for AI feedback.</p></div>
-                        )}
+                                {practiceMode === 'video' && <div className="bg-black rounded-lg overflow-hidden shadow-lg border border-gray-300 relative"><video ref={videoRef} autoPlay={!mediaUrl} muted playsInline controls={!!mediaUrl} src={mediaUrl || ''} className="w-full h-auto"></video></div>}
+                                {practiceMode === 'audio' && !mediaUrl && ( <div className="bg-gray-100 rounded-lg p-8 text-center"><MicrophoneIcon className={`w-16 h-16 mx-auto ${isRecording ? 'text-red-500 animate-pulse' : 'text-gray-400'}`} /><p className="mt-4 text-gray-600">{isRecording ? "Recording..." : "Prepare to record."}</p></div> )}
+                                {practiceMode === 'audio' && mediaUrl && ( <div className="p-8"><audio src={mediaUrl} controls className="w-full"></audio></div> )}
+                                {practiceMode === 'text' && ( <div><textarea value={textAnswer} onChange={(e) => setTextAnswer(e.target.value)} placeholder="Type your answer here..." className="w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500"></textarea></div> )}
+                                
+                                {mediaUrl && ( <div className="mt-6 bg-teal-50 p-4 rounded-lg text-center border border-teal-200"><h3 className="text-xl font-bold text-teal-800">Review Your Answer</h3><p className="text-gray-600 mt-1">Submit your recording for feedback.</p></div> )}
 
-                        {/* --- Action Buttons --- */}
-                        <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
-                            {practiceMode !== 'text' && !isRecording && !mediaUrl && <button onClick={handleStartRecording} className="w-full sm:w-auto bg-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-red-700 transition-all duration-300 inline-flex items-center justify-center gap-2"><MicrophoneIcon className="w-6 h-6"/>Record Answer</button>}
-                            {isRecording && <button onClick={handleStopRecording} className="w-full sm:w-auto bg-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-red-700 transition-all duration-300 inline-flex items-center justify-center gap-2 animate-pulse"><StopIcon className="w-6 h-6"/>Stop Recording</button>}
-                            {practiceMode === 'text' && <button onClick={handleSubmitTextAnswer} disabled={!textAnswer} className="w-full sm:w-auto bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 transition-all duration-300 inline-flex items-center justify-center gap-2 disabled:bg-gray-400"><PaperAirplaneIcon className="w-6 h-6"/>Submit Answer</button>}
-                            {mediaUrl && <button className="w-full sm:w-auto bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 transition-all duration-300 inline-flex items-center justify-center gap-2"><PaperAirplaneIcon className="w-6 h-6"/>Submit for Feedback</button>}
-                            
-                            <button onClick={fetchQuestion} disabled={isLoading || isRecording} className="w-full sm:w-auto bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-gray-700 transition-all duration-300 inline-flex items-center justify-center gap-2 disabled:bg-gray-400"><ArrowPathIcon className={`w-6 h-6 ${isLoading ? 'animate-spin' : ''}`}/>New Question</button>
-                            <button onClick={handleEndSession} className="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded-lg shadow-md hover:bg-gray-400 transition-all duration-300 inline-flex items-center justify-center gap-2"><XCircleIcon className="w-6 h-6"/>End Session</button>
-                        </div>
+                                <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+                                    {practiceMode !== 'text' && !isRecording && !mediaUrl && <button onClick={handleStartRecording} className="w-full sm:w-auto bg-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-red-700"><MicrophoneIcon className="w-6 h-6 inline-block mr-2"/>Record</button>}
+                                    {isRecording && <button onClick={handleStopRecording} className="w-full sm:w-auto bg-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-red-700 animate-pulse"><StopIcon className="w-6 h-6 inline-block mr-2"/>Stop</button>}
+                                    {mediaUrl && <button onClick={handleSubmitRecording} disabled={submissionStatus === 'submitting'} className="w-full sm:w-auto bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 disabled:bg-gray-400"><PaperAirplaneIcon className="w-6 h-6 inline-block mr-2"/>{submissionStatus === 'submitting' ? 'Submitting...' : 'Submit Recording'}</button>}
+                                    {practiceMode === 'text' && <button onClick={handleSubmitTextAnswer} disabled={!textAnswer || submissionStatus === 'submitting'} className="w-full sm:w-auto bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 disabled:bg-gray-400"><PaperAirplaneIcon className="w-6 h-6 inline-block mr-2"/>{submissionStatus === 'submitting' ? 'Submitting...' : 'Submit Answer'}</button>}
+                                    <button onClick={fetchQuestion} disabled={isLoading || isRecording} className="w-full sm:w-auto bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-gray-700 disabled:bg-gray-400"><ArrowPathIcon className={`w-6 h-6 inline-block mr-2 ${isLoading ? 'animate-spin' : ''}`}/>New Question</button>
+                                    <button onClick={handleEndSession} className="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded-lg shadow-md hover:bg-gray-400"><XCircleIcon className="w-6 h-6 inline-block mr-2"/>End Session</button>
+                                </div>
+                            </>
+                        )}
+                        {submissionStatus === 'error' && <p className="text-red-500 text-sm mt-4 text-center">{error}</p>}
                     </div>
                 )}
             </div>

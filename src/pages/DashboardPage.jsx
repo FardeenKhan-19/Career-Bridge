@@ -5,7 +5,8 @@ import { db } from '../firebase.js';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import {
     InfoIcon, BriefcaseIcon, BookOpenIcon, UserCircleIcon, ChatBubbleIcon,
-    ClipboardListIcon, ClockIcon, TrendingUpIcon, UsersIcon , DocumentSearchIcon 
+    ClipboardListIcon, ClockIcon, TrendingUpIcon, UsersIcon,
+    DocumentAnalyticsIcon // 1. Import the new, corrected icon
 } from '../components/Icons.jsx';
 
 // --- Reusable Components ---
@@ -62,18 +63,14 @@ const StudentDashboard = () => {
             try {
                 const appsQuery = query(collection(db, 'applications'), where('studentId', '==', user.uid), orderBy('appliedAt', 'desc'), limit(2));
                 const enrollQuery = query(collection(db, 'enrollments'), where('studentId', '==', user.uid), orderBy('enrolledAt', 'desc'), limit(2));
-
                 const [appSnapshot, enrollSnapshot] = await Promise.all([getDocs(appsQuery), getDocs(enrollQuery)]);
-
                 const apps = appSnapshot.docs.map(doc => ({ type: 'application', ...doc.data() }));
                 const enrolls = enrollSnapshot.docs.map(doc => ({ type: 'enrollment', ...doc.data() }));
-
                 const combined = [...apps, ...enrolls].sort((a, b) => {
                     const dateA = a.appliedAt || a.enrolledAt;
                     const dateB = b.appliedAt || b.enrolledAt;
                     return dateB.seconds - dateA.seconds;
                 });
-
                 setRecentActivity(combined.slice(0, 4));
             } catch (error) {
                 console.error("Error fetching recent activity:", error);
@@ -95,13 +92,16 @@ const StudentDashboard = () => {
                     <Link to="/courses" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors"><BookOpenIcon /><div><h3 className="font-bold text-lg text-gray-800">Browse Courses</h3><p className="text-gray-600">Upskill your talent.</p></div></Link>
                     <Link to="/my-courses" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors"><BookOpenIcon /><div><h3 className="font-bold text-lg text-gray-800">My Courses</h3><p className="text-gray-600">View enrolled courses.</p></div></Link>
                     <Link to="/interview-coach" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors"><ChatBubbleIcon /><div><h3 className="font-bold text-lg text-gray-800">AI Interview Coach</h3><p className="text-gray-600">Practice your skills.</p></div></Link>
+                    
+                    {/* --- THIS IS THE CORRECTED SECTION --- */}
                     <Link to="/resume-scanner" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors">
-        <DocumentSearchIcon />
-        <div>
-            <h3 className="font-bold text-lg text-gray-800">AI Resume Scanner</h3>
-            <p className="text-gray-600">Get instant analysis.</p>
-        </div>
-    </Link>
+                        {/* 2. Use the new icon. It will now have the correct default size and color. */}
+                        <DocumentAnalyticsIcon />
+                        <div>
+                            <h3 className="font-bold text-lg text-gray-800">AI Resume Scanner</h3>
+                            <p className="text-gray-600">Get instant analysis.</p>
+                        </div>
+                    </Link>
                 </div>
             </div>
             <div className="space-y-8">
@@ -139,10 +139,10 @@ const StudentDashboard = () => {
 
 // --- Recruiter Dashboard ---
 const RecruiterDashboard = () => {
+    // ... (No changes to this component)
     const { user } = useAuth();
     const [stats, setStats] = useState({ jobs: 0, applicants: 0 });
     const [recentApplicants, setRecentApplicants] = useState([]);
-
     useEffect(() => {
         const fetchDashboardData = async () => {
             if (!user) return;
@@ -150,20 +150,16 @@ const RecruiterDashboard = () => {
                 const jobsQuery = query(collection(db, 'jobs'), where('recruiterId', '==', user.uid));
                 const jobsSnapshot = await getDocs(jobsQuery);
                 const jobsData = jobsSnapshot.docs.map(doc => doc.id);
-
                 let applicantsCount = 0;
                 let allApplicants = [];
                 if (jobsData.length > 0) {
                     const appsQuery = query(collection(db, 'applications'), where('jobId', 'in', jobsData), orderBy('appliedAt', 'desc'), limit(5));
                     const appsSnapshot = await getDocs(appsQuery);
-                    // Fetch jobId with applicant data to create correct links
                     allApplicants = appsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
                     const totalAppsQuery = query(collection(db, 'applications'), where('jobId', 'in', jobsData));
                     const totalAppsSnapshot = await getDocs(totalAppsQuery);
                     applicantsCount = totalAppsSnapshot.size;
                 }
-
                 setStats({ jobs: jobsData.length, applicants: applicantsCount });
                 setRecentApplicants(allApplicants);
             } catch (error) {
@@ -180,10 +176,8 @@ const RecruiterDashboard = () => {
                 {!user?.isProfileComplete && <ProfileCompletionCard />}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Make Stat Cards clickable */}
                 <Link to="/manage-jobs" className="hover:scale-105 transition-transform"><StatCard title="Jobs Posted" value={stats.jobs} icon={<TrendingUpIcon />} color="bg-teal-500" /></Link>
                 <Link to="/manage-jobs" className="hover:scale-105 transition-transform"><StatCard title="Total Applicants" value={stats.applicants} icon={<UsersIcon />} color="bg-blue-500" /></Link>
-
                 <Link to="/post-job" className="bg-white p-6 rounded-lg shadow-lg text-center flex flex-col justify-center items-center hover:bg-gray-50 transition-colors">
                     <div className="bg-gray-200 p-3 rounded-full mb-2">
                         <BriefcaseIcon />
@@ -196,7 +190,6 @@ const RecruiterDashboard = () => {
                 <div className="bg-white rounded-lg shadow-md">
                     <ul className="divide-y divide-gray-200">
                         {recentApplicants.length > 0 ? recentApplicants.map((app) => (
-                            // Make each applicant item a clickable link
                             <Link to={`/jobs/${app.jobId}/applicants`} key={app.id} className="block p-4 hover:bg-gray-50 transition-colors">
                                 <li className="flex justify-between items-center">
                                     <div>
@@ -222,4 +215,4 @@ export default function DashboardPage() {
     if (user?.role === 'recruiter') { return <RecruiterDashboard />; }
     return <div className="text-center p-10">Loading...</div>;
 }
-
+        
