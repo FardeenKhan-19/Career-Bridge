@@ -119,7 +119,8 @@ export const RefreshIcon = (props) => (
   </svg>
 );
 
-// Add these to src/components/Icons.jsx
+// interview coach icons
+// --- Icons for Recording and Media ---
 
 export const VideoCameraIcon = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
@@ -127,8 +128,49 @@ export const VideoCameraIcon = (props) => (
   </svg>
 );
 
+export const MicrophoneIcon = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-14 0m7 6v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v2a3 3 0 01-3 3z" />
+  </svg>
+);
+
+export const StopIcon = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 10h6v4H9v-4z" />
+  </svg>
+);
+
+export const PlayIcon = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+
+// --- Icons for UI Controls ---
+
+export const PaperAirplaneIcon = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+    </svg>
+);
+
+export const ArrowPathIcon = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 4l1.5 1.5A9 9 0 0120.5 16l-1.5-1.5M20 4l-1.5 1.5A9 9 0 003.5 16l1.5-1.5" />
+  </svg>
+);
+
 export const ChevronDownIcon = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} {...props}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+  </svg>
+);
+// --- New Icon for Text Mode ---
+export const ChatBubbleLeftRightIcon = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193l-3.72-3.72a1.05 1.05 0 00-1.487 0l-3.72 3.72-3.72-3.72a1.05 1.05 0 00-1.487 0l-3.72 3.72-1.98-2.193c-.343-.343-.644-.714-.884-1.128a8.991 8.991 0 011.87-11.823 8.991 8.991 0 0113.88 0c.03.04.06.079.082.118zM9.75 9.75a.75.75 0 01.75-.75h3a.75.75 0 010 1.5h-3a.75.75 0 01-.75-.75zm0 3a.75.75 0 01.75-.75h.75a.75.75 0 010 1.5h-.75a.75.75 0 01-.75-.75z" />
   </svg>
 );

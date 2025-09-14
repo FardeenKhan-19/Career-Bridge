@@ -26,7 +26,6 @@ import CoursesPage from './pages/CoursesPage.jsx';
 import CourseDetailPage from './pages/CourseDetailPage.jsx';
 import MyCoursesPage from './pages/MyCoursesPage.jsx';
 import MyApplicationsPage from './pages/MyApplicationsPage.jsx';
-import InterviewCoachPage from './pages/InterviewCoachPage.jsx';
 import CandidateSearchPage from './pages/CandidateSearchPage.jsx';
 import ResumeScanner from './pages/ResumeScanner';
 import InterviewCoach from './pages/InterviewCoach';
@@ -66,9 +65,9 @@ export default function App() {
                     <Route path="/courses/:courseId" element={<ProtectedRoute><CourseDetailPage /></ProtectedRoute>} />
                     <Route path="/my-courses" element={<ProtectedRoute><MyCoursesPage /></ProtectedRoute>} />
 
-                    {/* AI Feature */}
-                    <Route path="/interview-coach" element={<ProtectedRoute><InterviewCoachPage /></ProtectedRoute>} />
+                    {/* AI Feature --- THIS LINE IS NOW CORRECTED --- */}
                     <Route path="/interview-coach" element={<ProtectedRoute><InterviewCoach /></ProtectedRoute>} />
+                
                     {/* Catch-all 404 Route */}
                     <Route path="*" element={<NotFoundPage />} />
                 </Route>
@@ -76,4 +75,3 @@ export default function App() {
         </BrowserRouter>
     );
 }
-
