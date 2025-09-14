@@ -3,9 +3,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 // --- Layout & Route Components ---
 import AppLayout from './components/Layout.jsx';
-import AuthLayout from './components/AuthLayout.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import PublicRoute from './components/PublicRoute.jsx';
+import AdminRoute from './components/AdminRoute.jsx';
 
 // --- Page Components ---
 import HomePage from './pages/HomePage.jsx';
@@ -25,19 +25,24 @@ import CoursesPage from './pages/CoursesPage.jsx';
 import CourseDetailPage from './pages/CourseDetailPage.jsx';
 import MyCoursesPage from './pages/MyCoursesPage.jsx';
 import MyApplicationsPage from './pages/MyApplicationsPage.jsx';
-import InterviewCoachPage from './pages/InterviewCoachPage.jsx';
 import CandidateSearchPage from './pages/CandidateSearchPage.jsx';
+import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
+import AdminCoursesPage from './pages/AdminCoursesPage.jsx';
+import CourseEditorPage from './pages/CourseEditorPage.jsx';
+import AdminUsersPage from './pages/AdminUsersPage.jsx';
+import AdminJobsPage from './pages/AdminJobsPage.jsx'; // <-- Import the new page
+
 
 export default function App() {
     return (
         <BrowserRouter>
             <Routes>
-                {/* Routes with the animated auth layout */}
+                {/* Auth routes without the main layout */}
                 <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
                 <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
                 <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
 
-                {/* Routes with the main application layout (header/footer) */}
+                {/* All other routes use the main AppLayout */}
                 <Route element={<AppLayout />}>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/about" element={<AboutUsPage />} />
@@ -48,7 +53,7 @@ export default function App() {
                     <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
-                    {/* Job Routes */}
+                    {/* Job & Application Routes */}
                     <Route path="/post-job" element={<ProtectedRoute><PostJobPage /></ProtectedRoute>} />
                     <Route path="/edit-job/:jobId" element={<ProtectedRoute><EditJobPage /></ProtectedRoute>} />
                     <Route path="/jobs" element={<ProtectedRoute><ViewJobsPage /></ProtectedRoute>} />
@@ -58,13 +63,18 @@ export default function App() {
                     <Route path="/my-applications" element={<ProtectedRoute><MyApplicationsPage /></ProtectedRoute>} />
                     <Route path="/candidate-search" element={<ProtectedRoute><CandidateSearchPage /></ProtectedRoute>} />
 
-                    {/* Course Routes */}
+                    {/* Course & Enrollment Routes */}
                     <Route path="/courses" element={<ProtectedRoute><CoursesPage /></ProtectedRoute>} />
                     <Route path="/courses/:courseId" element={<ProtectedRoute><CourseDetailPage /></ProtectedRoute>} />
                     <Route path="/my-courses" element={<ProtectedRoute><MyCoursesPage /></ProtectedRoute>} />
 
-                    {/* AI Feature */}
-                    <Route path="/interview-coach" element={<ProtectedRoute><InterviewCoachPage /></ProtectedRoute>} />
+                    {/* Admin Routes */}
+                    <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+                    <Route path="/admin/courses" element={<AdminRoute><AdminCoursesPage /></AdminRoute>} />
+                    <Route path="/admin/courses/new" element={<AdminRoute><CourseEditorPage /></AdminRoute>} />
+                    <Route path="/admin/courses/edit/:courseId" element={<AdminRoute><CourseEditorPage /></AdminRoute>} />
+                    <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+                    <Route path="/admin/jobs" element={<AdminRoute><AdminJobsPage /></AdminRoute>} /> {/* <-- Add the new route */}
 
                     {/* Catch-all 404 Route */}
                     <Route path="*" element={<NotFoundPage />} />

@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext.jsx';
-import { db } from '../firebase.js';
+import { Link, Navigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { db } from '../firebase';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { motion } from 'framer-motion';
 import {
     InfoIcon, BriefcaseIcon, BookOpenIcon, UserCircleIcon, ChatBubbleIcon,
     ClipboardListIcon, ClockIcon, TrendingUpIcon, UsersIcon
-} from '../components/Icons.jsx';
+} from '../components/Icons';
 
-// --- Reusable Components ---
+// --- Reusable & Child Components ---
 const ProfileCompletionCard = () => (
     <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-lg shadow-md mb-8" role="alert">
         <div className="flex items-center">
@@ -38,6 +39,41 @@ const StatCard = ({ title, value, icon, color }) => (
     </div>
 );
 
+const CircularProgressBar = ({ progress }) => {
+    const size = 120;
+    const strokeWidth = 10;
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const offset = circumference - (progress / 100) * circumference;
+
+    return (
+        <div className="relative flex flex-col items-center justify-center">
+            <svg width={size} height={size} className="transform -rotate-90">
+                <circle cx={size / 2} cy={size / 2} r={radius} stroke="#e5e7eb" strokeWidth={strokeWidth} fill="transparent" />
+                <motion.circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    stroke="#14b8a6"
+                    strokeWidth={strokeWidth}
+                    fill="transparent"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    strokeLinecap="round"
+                    initial={{ strokeDashoffset: circumference }}
+                    animate={{ strokeDashoffset: offset }}
+                    transition={{ duration: 1.5, ease: "easeInOut" }}
+                />
+            </svg>
+            <div className="absolute flex flex-col items-center">
+                <span className="text-2xl font-bold text-gray-700">{`${Math.round(progress)}%`}</span>
+                <span className="text-xs text-gray-500">Complete</span>
+            </div>
+        </div>
+    );
+};
+
+
 // --- Student Dashboard ---
 const StudentDashboard = () => {
     const { user } = useAuth();
@@ -45,8 +81,10 @@ const StudentDashboard = () => {
     const [profileStrength, setProfileStrength] = useState(0);
 
     useEffect(() => {
+        if (!user) return;
+
         const calculateProfileStrength = () => {
-            if (!user?.profile) return 0;
+            if (!user.profile) return;
             const fields = ['headline', 'bio', 'linkedinUrl', 'portfolioUrl'];
             let completedFields = 0;
             fields.forEach(field => {
@@ -58,7 +96,6 @@ const StudentDashboard = () => {
         };
 
         const fetchRecentActivity = async () => {
-            if (!user) return;
             try {
                 const appsQuery = query(collection(db, 'applications'), where('studentId', '==', user.uid), orderBy('appliedAt', 'desc'), limit(2));
                 const enrollQuery = query(collection(db, 'enrollments'), where('studentId', '==', user.uid), orderBy('enrolledAt', 'desc'), limit(2));
@@ -71,7 +108,10 @@ const StudentDashboard = () => {
                 const combined = [...apps, ...enrolls].sort((a, b) => {
                     const dateA = a.appliedAt || a.enrolledAt;
                     const dateB = b.appliedAt || b.enrolledAt;
-                    return dateB.seconds - dateA.seconds;
+                    if (dateA && dateB) {
+                        return dateB.seconds - dateA.seconds;
+                    }
+                    return 0;
                 });
 
                 setRecentActivity(combined.slice(0, 4));
@@ -82,7 +122,8 @@ const StudentDashboard = () => {
 
         calculateProfileStrength();
         fetchRecentActivity();
-    }, [user]);
+        // THE FIX: Depend on the user's stable UID, not the entire user object.
+    }, [user?.uid]);
 
     return (
         <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -92,19 +133,17 @@ const StudentDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                     <Link to="/jobs" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors"><BriefcaseIcon /><div><h3 className="font-bold text-lg text-gray-800">Browse Jobs</h3><p className="text-gray-600">Find open positions.</p></div></Link>
                     <Link to="/my-applications" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors"><ClipboardListIcon /><div><h3 className="font-bold text-lg text-gray-800">My Applications</h3><p className="text-gray-600">Track your status.</p></div></Link>
-                    <Link to="/courses" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors"><BookOpenIcon /><div><h3 className="font-bold text-lg text-gray-800">Browse Courses</h3><p className="text-gray-600">Upskill your talent.</p></div></Link>
                     <Link to="/my-courses" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors"><BookOpenIcon /><div><h3 className="font-bold text-lg text-gray-800">My Courses</h3><p className="text-gray-600">View enrolled courses.</p></div></Link>
-                    <Link to="/interview-coach" className="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4 hover:bg-gray-50 transition-colors"><ChatBubbleIcon /><div><h3 className="font-bold text-lg text-gray-800">AI Interview Coach</h3><p className="text-gray-600">Practice your skills.</p></div></Link>
                 </div>
             </div>
             <div className="space-y-8">
                 <div>
                     <h2 className="text-xl font-bold text-gray-800 mb-4">Profile Strength</h2>
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <div className="w-full bg-gray-200 rounded-full h-4">
-                            <div className="bg-teal-600 h-4 rounded-full" style={{ width: `${profileStrength}%` }}></div>
-                        </div>
-                        <p className="text-center mt-2 text-gray-600">{profileStrength}% Complete</p>
+                    <div className="bg-white p-6 rounded-lg shadow-md text-center">
+                        <CircularProgressBar progress={profileStrength} />
+                        <Link to="/profile" className="mt-4 inline-block text-teal-600 hover:underline font-semibold">
+                            Complete Your Profile
+                        </Link>
                     </div>
                 </div>
                 <div>
@@ -137,8 +176,8 @@ const RecruiterDashboard = () => {
     const [recentApplicants, setRecentApplicants] = useState([]);
 
     useEffect(() => {
+        if (!user) return;
         const fetchDashboardData = async () => {
-            if (!user) return;
             try {
                 const jobsQuery = query(collection(db, 'jobs'), where('recruiterId', '==', user.uid));
                 const jobsSnapshot = await getDocs(jobsQuery);
@@ -149,7 +188,6 @@ const RecruiterDashboard = () => {
                 if (jobsData.length > 0) {
                     const appsQuery = query(collection(db, 'applications'), where('jobId', 'in', jobsData), orderBy('appliedAt', 'desc'), limit(5));
                     const appsSnapshot = await getDocs(appsQuery);
-                    // Fetch jobId with applicant data to create correct links
                     allApplicants = appsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
                     const totalAppsQuery = query(collection(db, 'applications'), where('jobId', 'in', jobsData));
@@ -164,7 +202,8 @@ const RecruiterDashboard = () => {
             }
         };
         fetchDashboardData();
-    }, [user]);
+        // THE FIX: Depend on the user's stable UID, not the entire user object.
+    }, [user?.uid]);
 
     return (
         <div className="w-full space-y-8">
@@ -173,7 +212,6 @@ const RecruiterDashboard = () => {
                 {!user?.isProfileComplete && <ProfileCompletionCard />}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Make Stat Cards clickable */}
                 <Link to="/manage-jobs" className="hover:scale-105 transition-transform"><StatCard title="Jobs Posted" value={stats.jobs} icon={<TrendingUpIcon />} color="bg-teal-500" /></Link>
                 <Link to="/manage-jobs" className="hover:scale-105 transition-transform"><StatCard title="Total Applicants" value={stats.applicants} icon={<UsersIcon />} color="bg-blue-500" /></Link>
 
@@ -189,7 +227,6 @@ const RecruiterDashboard = () => {
                 <div className="bg-white rounded-lg shadow-md">
                     <ul className="divide-y divide-gray-200">
                         {recentApplicants.length > 0 ? recentApplicants.map((app) => (
-                            // Make each applicant item a clickable link
                             <Link to={`/jobs/${app.jobId}/applicants`} key={app.id} className="block p-4 hover:bg-gray-50 transition-colors">
                                 <li className="flex justify-between items-center">
                                     <div>
@@ -208,11 +245,26 @@ const RecruiterDashboard = () => {
 };
 
 
+// --- Main DashboardPage Component ---
 export default function DashboardPage() {
     const { user, loading } = useAuth();
-    if (loading) { return <div className="text-center p-10">Loading dashboard...</div>; }
-    if (user?.role === 'student') { return <StudentDashboard />; }
-    if (user?.role === 'recruiter') { return <RecruiterDashboard />; }
-    return <div className="text-center p-10">Loading...</div>;
+
+    if (loading) {
+        return <div className="text-center p-10">Loading...</div>;
+    }
+
+    if (user?.role === 'admin') {
+        return <Navigate to="/admin" replace />;
+    }
+
+    if (user?.role === 'student') {
+        return <StudentDashboard />;
+    }
+
+    if (user?.role === 'recruiter') {
+        return <RecruiterDashboard />;
+    }
+
+    return <Navigate to="/login" />;
 }
 

@@ -16,7 +16,7 @@ const FeatureCard = ({ icon, title, children }) => (
 
 export default function HomePage() {
     const { user } = useAuth();
-    const heroImage = "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2084&auto=format&fit=crop";
+    const heroImage = "https://static.vecteezy.com/system/resources/previews/023/659/749/non_2x/bridging-the-gap-help-or-guidance-career-advancement-giant-businessman-hands-bridge-the-gap-for-people-to-progress-towards-the-target-vector.jpg";
 
     return (
         <div className="w-full">

@@ -1,4 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { db } from '../firebase.js'; // Make sure this path is correct for your project
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 // --- About Us Page ---
 export function AboutUsPage() {
@@ -25,35 +29,117 @@ export function AboutUsPage() {
     );
 }
 
-// --- Contact Page ---
-export function ContactPage() {
-    return (
-        <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg">
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">Contact Us</h1>
-            <p className="text-gray-600 mb-8">We'd love to hear from you! Please fill out the form below.</p>
+// --- Contact Page --
 
-            <form>
-                <div className="mb-4">
-                    <label htmlFor="name" className="block text-gray-700 font-bold mb-2">Full Name</label>
-                    <input type="text" id="name" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="John Doe" />
-                </div>
-                <div className="mb-4">
-                    <label htmlFor="email" className="block text-gray-700 font-bold mb-2">Email Address</label>
-                    <input type="email" id="email" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="you@example.com" />
-                </div>
-                <div className="mb-6">
-                    <label htmlFor="message" className="block text-gray-700 font-bold mb-2">Message</label>
-                    <textarea id="message" rows="5" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Your message..."></textarea>
-                </div>
-                <div className="text-center">
-                    <button type="submit" className="bg-teal-600 text-white font-bold py-2 px-6 rounded-md hover:bg-teal-700">
-                        Send Message
+export function ContactPage() {
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        message: '',
+    });
+    const [loading, setLoading] = useState(false);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!formData.name || !formData.email || !formData.message) {
+            toast.error('Please fill out all fields.');
+            return;
+        }
+
+        setLoading(true);
+        const toastId = toast.loading('Sending your message...');
+
+        try {
+            // This creates a new collection called 'contact_messages' if it doesn't exist
+            // and adds a new document with the form data.
+            await addDoc(collection(db, 'contact_messages'), {
+                name: formData.name,
+                email: formData.email,
+                message: formData.message,
+                submittedAt: serverTimestamp(), // Records the submission time
+            });
+
+            toast.success('Message sent successfully!', { id: toastId });
+            // Reset the form fields after a successful submission
+            setFormData({ name: '', email: '', message: '' });
+        } catch (error) {
+            console.error("Error submitting contact form:", error);
+            toast.error('Could not send message. Please try again later.', { id: toastId });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex justify-center items-center py-12">
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="bg-white p-8 sm:p-10 rounded-xl shadow-lg w-full max-w-2xl"
+            >
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-2">Contact Us</h1>
+                <p className="text-gray-600 mb-8">We'd love to hear from you! Please fill out the form below.</p>
+
+                <form onSubmit={handleSubmit} noValidate>
+                    <div className="mb-6">
+                        <label htmlFor="name" className="block text-gray-700 font-semibold mb-2">Full Name</label>
+                        <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            placeholder="John Doe"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 transition-shadow"
+                            required
+                        />
+                    </div>
+                    <div className="mb-6">
+                        <label htmlFor="email" className="block text-gray-700 font-semibold mb-2">Email Address</label>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            placeholder="you@example.com"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 transition-shadow"
+                            required
+                        />
+                    </div>
+                    <div className="mb-8">
+                        <label htmlFor="message" className="block text-gray-700 font-semibold mb-2">Message</label>
+                        <textarea
+                            id="message"
+                            name="message"
+                            value={formData.message}
+                            onChange={handleChange}
+                            placeholder="Your message..."
+                            rows="5"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 transition-shadow"
+                            required
+                        ></textarea>
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-teal-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-teal-700 transition-all duration-300 disabled:bg-gray-400"
+                    >
+                        {loading ? 'Sending...' : 'Send Message'}
                     </button>
-                </div>
-            </form>
+                </form>
+            </motion.div>
         </div>
     );
 }
+
+
 
 // --- Privacy Policy Page ---
 export function PrivacyPolicyPage() {
