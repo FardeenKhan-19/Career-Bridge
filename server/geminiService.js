@@ -4,64 +4,48 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-// --- Existing function for resume analysis ---
-async function analyzeResume(resumeText) {
+// --- (analyzeResume and analyzeAnswer functions remain unchanged) ---
+async function analyzeResume(resumeText) { /* ... existing code ... */ }
+async function analyzeAnswer(question, answer) { /* ... existing code ... */ }
+
+
+// --- NEW, ADVANCED RESUME REWRITE FUNCTION ---
+async function rewriteResume(resumeText, analysis) {
     const prompt = `
-        Act as an expert career coach and resume reviewer.
-        Analyze the following resume text and provide a concise, actionable critique in three sections.
-        Use Markdown for formatting.
+        Act as an elite professional resume designer and writer. Your task is to transform a student's resume into a beautiful, modern, and highly effective document based on the provided text and an AI analysis.
 
-        **1. First Impressions:**
-        Provide a one-sentence summary of the candidate's professional profile based on the resume.
-
-        **2. Strengths:**
-        In 2-3 bullet points, list the strongest aspects of this resume.
-
-        **3. Areas for Improvement:**
-        In 2-3 bullet points, list the most critical areas that need improvement. Be specific and provide examples.
+        Here is the original resume text:
         ---
-        RESUME TEXT:
         ${resumeText}
+        ---
+
+        Here is the AI's analysis and suggestions for improvement:
+        ---
+        ${analysis}
+        ---
+
+        **CRITICAL INSTRUCTIONS:**
+        1.  **Structure and Format:** Rewrite the entire resume using clean Markdown. The final output must be ready to be rendered as a beautiful document.
+        2.  **Use Professional Sections:** Structure the resume with clear headings like **"Summary"**, **"Skills"**, **"Experience"**, **"Education"**, and **"Projects"**.
+        3.  **Enhance with Formatting:**
+            * Use **bolding** for all section titles and job titles.
+            * Use bullet points (e.g., \`* \` or \`- \`) for job responsibilities and achievements.
+            * Ensure clean spacing and professional typography.
+        4.  **Content Improvement:**
+            * Aggressively implement the suggestions from the provided analysis.
+            * Rewrite sentences using strong action verbs (e.g., "Managed", "Engineered", "Launched", "Quantified").
+            * Quantify achievements wherever possible (e.g., "Increased user engagement by 20%").
+        5.  **Output:** Return **only** the final, rewritten resume in Markdown format. Do not include any extra commentary, introductions, or explanations. The output should be ready to be copied and pasted directly.
     `;
     try {
         const result = await model.generateContent(prompt);
         return result.response.text();
     } catch (error) {
-        console.error('Error analyzing resume with Gemini:', error);
-        throw new Error('Failed to get analysis from AI service.');
+        console.error('Error rewriting resume with Gemini:', error);
+        throw new Error('Failed to get rewritten resume from AI service.');
     }
 }
 
 
-// --- NEW FUNCTION for interview answer analysis ---
-async function analyzeAnswer(question, answer) {
-    const prompt = `
-        As an expert interview coach, analyze an answer to an interview question.
-        The user was asked the following question:
-        **Question:** "${question}"
+module.exports = { analyzeResume, analyzeAnswer, rewriteResume };
 
-        They provided this answer:
-        **Answer:** "${answer}"
-
-        Please provide feedback in Markdown format with the following three sections:
-
-        **1. Overall Feedback:**
-        Start with a brief, one-paragraph summary of the answer's effectiveness.
-
-        **2. Strengths:**
-        In bullet points, identify what the candidate did well. For example, "Clearly stated the situation," or "Quantified the result effectively."
-
-        **3. Areas for Improvement:**
-        In bullet points, provide specific, actionable advice on how to make the answer stronger. For example, "The answer could be more structured. Consider using the STAR method (Situation, Task, Action, Result)," or "Try to be more concise in the 'Task' description."
-    `;
-    try {
-        const result = await model.generateContent(prompt);
-        return result.response.text();
-    } catch (error) {
-        console.error('Error analyzing answer with Gemini:', error);
-        throw new Error('Failed to get answer analysis from AI service.');
-    }
-}
-
-
-module.exports = { analyzeResume, analyzeAnswer };

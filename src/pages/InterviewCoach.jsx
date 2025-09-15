@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
-import { useAuth } from '../contexts/AuthContext.jsx'; // Import useAuth to get the user ID
 import { 
     VideoCameraIcon, ChevronDownIcon, StopIcon, ArrowPathIcon, XCircleIcon, 
     MicrophoneIcon, PlayIcon, PaperAirplaneIcon, ChatBubbleLeftRightIcon, CheckCircleIcon 
@@ -35,7 +34,6 @@ const AnalysisDisplay = ({ content }) => {
 
 const InterviewCoach = () => {
     // --- STATE MANAGEMENT ---
-    const { user } = useAuth(); // Get user from AuthContext for saving sessions
     const [interviewType, setInterviewType] = useState('behavioral');
     const [jobRole, setJobRole] = useState('software-engineer');
     const [practiceMode, setPracticeMode] = useState('video');
@@ -97,6 +95,9 @@ const InterviewCoach = () => {
             streamRef.current.getTracks().forEach(track => track.stop());
         }
         setSessionStarted(false);
+        setError('');
+        setCurrentQuestion('');
+        setSubmissionStatus(null);
     };
 
     const handleStartRecording = () => {
@@ -125,92 +126,34 @@ const InterviewCoach = () => {
         }
     };
 
-    // --- Final Submission Logic for Audio/Video ---
     const handleSubmitRecording = async () => {
-        if (!user) {
-            setError("You must be logged in to save a session.");
-            setSubmissionStatus('error');
-            return;
-        }
         setSubmissionStatus('submitting');
-        setAiFeedback('');
-        
-        const mimeType = practiceMode === 'video' ? 'video/webm' : 'audio/webm';
-        const blob = new Blob(recordedChunksRef.current, { type: mimeType });
-        const formData = new FormData();
-        formData.append('audio', blob, 'recording.webm');
-        formData.append('question', currentQuestion);
-
-        try {
-            const response = await fetch('http://localhost:5000/api/interview/analyze-audio', {
-                method: 'POST',
-                body: formData,
-            });
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Failed to get feedback from server.');
-            }
-            const data = await response.json();
-            setAiFeedback(data.feedback);
+        // Placeholder for future speech-to-text integration
+        setTimeout(() => {
+            setAiFeedback("Feedback for audio and video answers is a feature coming soon! This requires a speech-to-text service to transcribe your response for analysis.");
             setSubmissionStatus('success');
-
-            // Save session to Firestore
-            await fetch('http://localhost:5000/api/interview/session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.uid,
-                    question: currentQuestion,
-                    answer: `(Audio/Video Response) Transcription: ${data.transcription}`,
-                    feedback: data.feedback,
-                    type: interviewType,
-                    role: jobRole,
-                    mode: practiceMode
-                }),
-            });
-        } catch (err) {
-            setSubmissionStatus('error');
-            setError(err.message);
-        }
+        }, 1500);
     };
     
-    // --- Final Submission Logic for Text ---
     const handleSubmitTextAnswer = async () => {
-        if (!user) {
-            setError("You must be logged in to save a session.");
-            setSubmissionStatus('error');
-            return;
-        }
         setSubmissionStatus('submitting');
         setAiFeedback('');
         try {
             const response = await fetch('http://localhost:5000/api/interview/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: currentQuestion, answer: textAnswer }),
+                body: JSON.stringify({
+                    question: currentQuestion,
+                    answer: textAnswer,
+                }),
             });
             if (!response.ok) {
                 const errData = await response.json();
-                throw new Error(errData.error || 'Failed to get feedback from server.');
+                throw new Error(errData.error || 'Failed to get feedback from the server.');
             }
             const data = await response.json();
             setAiFeedback(data.feedback);
             setSubmissionStatus('success');
-            
-            // Save session to Firestore
-            await fetch('http://localhost:5000/api/interview/session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.uid,
-                    question: currentQuestion,
-                    answer: textAnswer,
-                    feedback: data.feedback,
-                    type: interviewType,
-                    role: jobRole,
-                    mode: practiceMode
-                }),
-            });
         } catch (err) {
             setSubmissionStatus('error');
             setError(err.message);
@@ -262,10 +205,10 @@ const InterviewCoach = () => {
                                     <div className="flex flex-col items-center gap-4">
                                         {submissionStatus === 'success' ? <CheckCircleIcon className="w-16 h-16 text-green-600" /> : <XCircleIcon className="w-16 h-16 text-red-600" />}
                                         <h2 className={`text-2xl font-semibold ${submissionStatus === 'success' ? 'text-green-800' : 'text-red-800'}`}>
-                                            {submissionStatus === 'success' ? 'Feedback Received!' : 'An Error Occurred'}
+                                            {submissionStatus === 'success' ? 'Answer Submitted!' : 'An Error Occurred'}
                                         </h2>
                                         <p className="text-gray-600">
-                                            {submissionStatus === 'success' ? 'Your session has been saved. Here is your AI-powered feedback:' : error}
+                                            {submissionStatus === 'success' ? 'Here is your AI-powered feedback:' : error}
                                         </p>
                                     </div>
                                     {submissionStatus === 'success' && <AnalysisDisplay content={aiFeedback} />}
