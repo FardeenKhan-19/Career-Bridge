@@ -1,109 +1,118 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-// Helper to determine the color of the status badge
-const getStatusColor = (status) => {
-    switch (status) {
-        case 'Applied': return 'bg-blue-100 text-blue-800';
-        case 'Under Review': return 'bg-yellow-100 text-yellow-800';
-        case 'Interviewing': return 'bg-purple-100 text-purple-800';
-        case 'Hired': return 'bg-green-100 text-green-800';
-        case 'Rejected': return 'bg-red-100 text-red-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
+const statusColors = {
+    'Under Review': 'bg-yellow-100 text-yellow-800',
+    'Interviewing': 'bg-blue-100 text-blue-800',
+    'Hired': 'bg-green-100 text-green-800',
+    'Rejected': 'bg-red-100 text-red-800',
 };
 
-export default function ApplicantsPage() {
+const StudentAvatar = ({ name }) => {
+    const initial = name ? name.charAt(0).toUpperCase() : '?';
+    return <div className="h-10 w-10 flex items-center justify-center rounded-full bg-gray-500 text-white font-bold">{initial}</div>;
+};
+
+const ApplicantsPage = () => {
     const { jobId } = useParams();
     const [applicants, setApplicants] = useState([]);
+    const [job, setJob] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [jobTitle, setJobTitle] = useState('');
-
-    const fetchApplicants = async () => {
-        if (!jobId) return;
-        try {
-            const jobRef = doc(db, 'jobs', jobId);
-            const jobSnap = await getDoc(jobRef);
-            if (jobSnap.exists()) {
-                setJobTitle(jobSnap.data().jobTitle);
-            }
-
-            const q = query(collection(db, 'applications'), where('jobId', '==', jobId));
-            const querySnapshot = await getDocs(q);
-            const applicantsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setApplicants(applicantsData);
-        } catch (error) {
-            console.error("Error fetching applicants: ", error);
-            toast.error("Failed to load applicants.");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     useEffect(() => {
-        fetchApplicants();
-    }, [jobId]);
+        // Fetch job details
+        const jobRef = doc(db, 'jobs', jobId);
+        getDoc(jobRef).then(docSnap => {
+            if (docSnap.exists()) setJob(docSnap.data());
+        });
 
-    const handleStatusChange = async (applicationId, newStatus) => {
-        const docRef = doc(db, 'applications', applicationId);
+        // Listen for applicants in real-time
+        const q = query(collection(db, 'applications'), where('jobId', '==', jobId));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const apps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setApplicants(apps);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, [jobId]);
+    
+    const handleStatusChange = async (appId, newStatus) => {
+        const appRef = doc(db, 'applications', appId);
         try {
-            await updateDoc(docRef, { status: newStatus });
-            // Refresh the list to show the updated status immediately
-            fetchApplicants();
-            toast.success("Applicant status updated!");
+            await updateDoc(appRef, { status: newStatus });
+            toast.success("Status updated successfully!");
         } catch (error) {
-            console.error("Error updating status: ", error);
             toast.error("Failed to update status.");
         }
     };
 
-    if (loading) {
-        return <div className="text-center p-10">Loading applicants...</div>;
-    }
+    if (loading) return <div className="text-center p-10">Loading Applicants...</div>;
 
     return (
-        <div className="w-full max-w-5xl mx-auto">
-            <Link to="/manage-jobs" className="text-teal-600 hover:text-teal-800 mb-6 inline-block">&larr; Back to your jobs</Link>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Applicants for {jobTitle}</h1>
-            <div className="bg-white p-6 rounded-lg shadow-lg mt-8">
-                {applicants.length > 0 ? (
-                    <ul className="divide-y divide-gray-200">
-                        {applicants.map(applicant => (
-                            <li key={applicant.id} className="py-4 flex flex-col sm:flex-row justify-between sm:items-center">
-                                <div className="mb-4 sm:mb-0">
-                                    <p className="text-lg font-semibold text-gray-800">{applicant.studentName}</p>
-                                    <p className="text-gray-600">{applicant.studentEmail}</p>
-                                    <p className="text-sm text-gray-500 mt-1">
-                                        Applied on: {applicant.appliedAt ? new Date(applicant.appliedAt.seconds * 1000).toLocaleDateString() : 'N/A'}
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                     <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(applicant.status)}`}>
-                                        {applicant.status}
-                                    </span>
-                                    <select
-                                        onChange={(e) => handleStatusChange(applicant.id, e.target.value)}
-                                        defaultValue=""
-                                        className="border border-gray-300 rounded-md p-2"
-                                    >
-                                        <option value="" disabled>Change Status</option>
-                                        <option value="Under Review">Under Review</option>
-                                        <option value="Interviewing">Interviewing</option>
-                                        <option value="Hired">Hired</option>
-                                        <option value="Rejected">Rejected</option>
-                                    </select>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-center text-gray-500 py-4">No applicants for this job yet.</p>
-                )}
+        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div className="mb-8">
+                <Link to="/manage-jobs" className="text-sm font-medium text-gray-600 hover:text-gray-900">&larr; Back to your jobs</Link>
+                <h1 className="text-3xl font-bold text-gray-900 mt-2">Applicants for {job?.jobTitle || '...'}</h1>
+            </div>
+
+            <div className="bg-white shadow-xl rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applied On</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Change Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {applicants.length > 0 ? applicants.map(app => (
+                                <tr key={app.id}>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center">
+                                            <StudentAvatar name={app.studentName} />
+                                            <div className="ml-4">
+                                                <div className="text-sm font-medium text-gray-900">{app.studentName}</div>
+                                                <div className="text-sm text-gray-500">{app.studentEmail}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {app.appliedAt.toDate().toLocaleDateString()}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[app.status] || 'bg-gray-100 text-gray-800'}`}>
+                                            {app.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                        <select
+                                            onChange={(e) => handleStatusChange(app.id, e.target.value)}
+                                            value={app.status}
+                                            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                        >
+                                            <option>Under Review</option>
+                                            <option>Interviewing</option>
+                                            <option>Hired</option>
+                                            <option>Rejected</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            )) : (
+                                <tr>
+                                    <td colSpan="4" className="text-center text-gray-500 py-12">No applicants for this job yet.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );
-}
+};
 
+export default ApplicantsPage;
