@@ -33,6 +33,7 @@ const Header = () => {
                     {/* The "Home" link has been completely removed as requested. */}
                     {user && user.role === 'student' && <Link to="/courses" className="text-gray-600 hover:text-teal-600">Courses</Link>}
                     {user && !isAdminPage && <Link to="/dashboard" className="text-gray-600 hover:text-teal-600">Dashboard</Link>}
+                    {user && !isAdminPage && <Link to="/chat" className="text-gray-600 hover:text-teal-600">Messages</Link>} {/* <-- Change yahan kiya hai */}
                 </div>
                 <div className="flex items-center space-x-4">
                     {user ? (
@@ -102,4 +103,3 @@ export default function AppLayout() {
         </div>
     );
 };
-
