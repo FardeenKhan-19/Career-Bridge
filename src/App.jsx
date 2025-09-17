@@ -45,6 +45,10 @@ import QnaSessionPage from './pages/QnaSessionPage.jsx';
 import StudentProfileViewPage from './pages/StudentProfileViewPage.jsx';
 import CompanyProfilePage from './pages/CompanyProfilePage.jsx';
 
+// --- ADDED AI TOOL IMPORTS ---
+import InterviewCoach from './pages/InterviewCoach.jsx';
+import ResumeScanner from './pages/ResumeScanner.jsx';
+
 
 export default function App() {
     return (
@@ -83,6 +87,10 @@ export default function App() {
                     <Route path="/courses" element={<ProtectedRoute><CoursesPage /></ProtectedRoute>} />
                     <Route path="/courses/:courseId" element={<ProtectedRoute><CourseDetailPage /></ProtectedRoute>} />
                     <Route path="/my-courses" element={<ProtectedRoute><MyCoursesPage /></ProtectedRoute>} />
+                    
+                    {/* --- ADDED AI TOOL ROUTES --- */}
+                    <Route path="/interview-coach" element={<ProtectedRoute><InterviewCoach /></ProtectedRoute>} />
+                    <Route path="/resume-scanner" element={<ProtectedRoute><ResumeScanner /></ProtectedRoute>} />
                     
                     {/* Job Fair Routes */}
                     <Route path="/create-job-fair" element={<ProtectedRoute><CreateJobFairPage /></ProtectedRoute>} />
