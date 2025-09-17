@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
-import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase.js';
 import { Logo, UserCircleIcon } from './Icons.jsx';
-import { Toaster } from 'react-hot-toast';
+// We don't need to import Toaster here anymore
 import { motion } from 'framer-motion';
 
 const Header = () => {
@@ -22,6 +22,12 @@ const Header = () => {
     const isHomePage = location.pathname === '/';
     const isAdminPage = location.pathname.startsWith('/admin');
 
+    // Style for active NavLink
+    const navLinkStyle = ({ isActive }) =>
+        "text-gray-600 hover:text-teal-600 transition-colors" +
+        (isActive ? " font-bold text-teal-600" : "");
+
+
     return (
         <header className="bg-white shadow-md sticky top-0 z-50">
             <nav className="container mx-auto px-6 py-3 flex justify-between items-center">
@@ -30,10 +36,11 @@ const Header = () => {
                     <span className="text-xl font-bold text-gray-800">CareerBridge</span>
                 </Link>
                 <div className="hidden md:flex items-center space-x-6">
-                    {/* The "Home" link has been completely removed as requested. */}
-                    {user && user.role === 'student' && <Link to="/courses" className="text-gray-600 hover:text-teal-600">Courses</Link>}
-                    {user && !isAdminPage && <Link to="/dashboard" className="text-gray-600 hover:text-teal-600">Dashboard</Link>}
-                    {user && !isAdminPage && <Link to="/chat" className="text-gray-600 hover:text-teal-600">Messages</Link>} {/* <-- Change yahan kiya hai */}
+                    {user && user.role === 'student' && <NavLink to="/courses" className={navLinkStyle}>Courses</NavLink>}
+                    {user && user.role === 'student' && <NavLink to="/resources" className={navLinkStyle}>Resources</NavLink>}
+                    {user && user.role === 'student' && <NavLink to="/companies" className={navLinkStyle}>Companies</NavLink>}
+                    {user && !isAdminPage && <NavLink to="/dashboard" className={navLinkStyle}>Dashboard</NavLink>}
+                    {user && !isAdminPage && <NavLink to="/chat" className={navLinkStyle}>Messages</NavLink>}
                 </div>
                 <div className="flex items-center space-x-4">
                     {user ? (
@@ -84,7 +91,7 @@ export default function AppLayout() {
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-50">
-            <Toaster position="top-center" reverseOrder={false} />
+            {/* The duplicate Toaster component has been removed from this file. */}
             <Header />
             <main className="relative z-10 flex-grow p-6">
                 <div className="container mx-auto">
